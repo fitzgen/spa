@@ -70,8 +70,8 @@ Comma<T>: Vec<T> = {
 pub Function: ast::Function<'input> =
     <name:Identifier> "(" <args:Comma<Identifier>> ")" "{"
         "var" <vars:Comma<Identifier>> ";"
-        <body:Statements> 
-        "return" <ret:Expression> ";" 
+        <body:Statements>
+        "return" <ret:Expression> ";"
     "}" => ast::Function {
         name: name,
         arguments: args,
@@ -79,3 +79,7 @@ pub Function: ast::Function<'input> =
         body: body,
         ret: ret,
     };
+
+pub Program: ast::Program<'input> = {
+    <f:Function+> => ast::Program { functions: f }
+};

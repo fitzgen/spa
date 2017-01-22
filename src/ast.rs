@@ -38,3 +38,8 @@ pub struct Function<'a> {
     pub body: Vec<Statement<'a>>,
     pub ret: Expression<'a>,
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Program<'a> {
+    pub functions: Vec<Function<'a>>,
+}
