@@ -1,0 +1,11 @@
+[package]
+authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
+name = "spa"
+version = "0.1.0"
+build = "build.rs"
+
+[build-dependencies]
+lalrpop = "0.12.4"
+
+[dependencies]
+lalrpop-util = "0.12.4"

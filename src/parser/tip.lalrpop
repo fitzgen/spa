@@ -1,0 +1,81 @@
+use ast;
+use std::str::FromStr;
+
+grammar;
+
+pub Integer: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
+
+pub Identifier: ast::Identifier<'input> = <s:r"[a-zA-Z][a-zA-Z0-9_]*"> => ast::Identifier(s);
+
+pub Expression: ast::Expression<'input> = {
+    <l:Expression> "==" <r:AddSub> => ast::Expression::Equal(Box::new([l, r])),
+    <l:Expression> ">" <r:AddSub> => ast::Expression::Greater(Box::new([l, r])),
+    AddSub,
+};
+
+AddSub: ast::Expression<'input> = {
+    <l:AddSub> "+" <r:Factor> => ast::Expression::Addition(Box::new([l, r])),
+    <l:AddSub> "-" <r:Factor> => ast::Expression::Subtraction(Box::new([l, r])),
+    Factor,
+};
+
+Factor: ast::Expression<'input> = {
+    <l:Factor> "*" <r:Unary> => ast::Expression::Multiplication(Box::new([l, r])),
+    <l:Factor> "/" <r:Unary> => ast::Expression::Division(Box::new([l, r])),
+    Unary,
+};
+
+Unary: ast::Expression<'input> = {
+    "-" <e:Term> => ast::Expression::Negation(Box::new(e)),
+    "*" <e:Term> => ast::Expression::Deref(Box::new(e)),
+    Term,
+};
+
+Term: ast::Expression<'input> = {
+    "input" => ast::Expression::Input,
+    "malloc" => ast::Expression::Malloc,
+    "null" => ast::Expression::Null,
+    <i:Integer> => ast::Expression::Integer(i),
+    <i:Identifier> => ast::Expression::Identifier(i),
+    <fun:Identifier> "(" <args:Comma<Expression>> ")" => ast::Expression::Call(fun, args),
+    "(" <fun:Expression> ")" "(" <args:Comma<Expression>> ")" => ast::Expression::IndirectCall(Box::new(fun), args),
+    "&" <i:Identifier> => ast::Expression::AddressOf(i),
+    "(" <Expression> ")",
+};
+
+pub Statement: ast::Statement<'input> = {
+    <i:Identifier> "=" <e:Expression> ";" => ast::Statement::Assignment(i, e),
+    "*" <i:Identifier> "=" <e:Expression> ";" => ast::Statement::DerefAssignment(i, e),
+    "output" <e:Expression> ";" => ast::Statement::Output(e),
+    "if" "(" <e:Expression> ")" "{" <consequent:Statements> "}" => ast::Statement::If(e, consequent, None),
+    "if" "(" <e:Expression> ")" "{" <consequent:Statements> "}" "else" "{" <alternative:Statements> "}" => ast::Statement::If(e, consequent, Some(alternative)),
+    "while" "(" <e:Expression> ")" "{" <s:Statements> "}" => ast::Statement::While(e, s),
+};
+
+Statements: Vec<ast::Statement<'input>> = {
+    Statement*,
+};
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+
+pub Function: ast::Function<'input> =
+    <name:Identifier> "(" <args:Comma<Identifier>> ")" "{"
+        "var" <vars:Comma<Identifier>> ";"
+        <body:Statements> 
+        "return" <ret:Expression> ";" 
+    "}" => ast::Function {
+        name: name,
+        arguments: args,
+        variables: vars,
+        body: body,
+        ret: ret,
+    };
