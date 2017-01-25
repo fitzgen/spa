@@ -1,9 +1,11 @@
-include!("./tip.rs");
+mod tip;
+
+pub use self::tip::*;
 
 #[cfg(test)]
 mod tests {
     use ast;
-    use super::*;
+    use parser::tip::*;
 
     #[test]
     fn integer() {
