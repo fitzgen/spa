@@ -7,7 +7,7 @@ pub enum Expression<'a> {
     Malloc,
     Null,
     Deref(Box<Expression<'a>>),
-    Integer(i64),
+    Integer(isize),
     Identifier(Identifier<'a>),
     Addition(Box<[Expression<'a>; 2]>),
     Subtraction(Box<[Expression<'a>; 2]>),
