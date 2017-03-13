@@ -117,11 +117,13 @@ mod tests {
 
     #[test]
     fn program() {
-        assert!(parse_Program("").is_err(), "a program has at least one function");
+        assert!(parse_Program("").is_err(),
+                "a program has at least one function");
         assert!(parse_Program("foo(w, x) { var y, z; output 1; return 2; }").is_ok());
         assert!(parse_Program("
 foo(w, x) { var y, z; output 1; return 2; }
 bar(x) { var y; output 1; return x; }
-").is_ok());
+")
+            .is_ok());
     }
 }
