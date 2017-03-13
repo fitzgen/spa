@@ -1,11 +1,12 @@
-mod tip;
+// lalrpop generated code has many warnings that make clippy unhappy.
+#![allow(warnings)]
 
-pub use self::tip::*;
+include!(concat!(env!("OUT_DIR"), "/parser/tip.rs"));
 
 #[cfg(test)]
 mod tests {
     use ast;
-    use parser::tip::*;
+    use super::*;
 
     #[test]
     fn integer() {
