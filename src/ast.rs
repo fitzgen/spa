@@ -1,8 +1,9 @@
 use error;
 use std::collections::HashMap;
+use std::hash;
 use std::iter::FromIterator;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Identifier<'a>(pub &'a str);
 
 #[derive(Debug, PartialEq, Eq)]
@@ -46,6 +47,17 @@ pub struct Function<'a> {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Program<'a> {
     pub functions: Vec<Function<'a>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AstNode<'a, 'b>
+    where 'a: 'b
+{
+    Identifier(Identifier<'a>),
+    Expression(&'b Expression<'a>),
+    Statement(&'b Statement<'a>),
+    Function(&'b Function<'a>),
+    Program(&'b Program<'a>),
 }
 
 /// Walk the AST and ensure all identifiers are canonicalized.
@@ -237,6 +249,29 @@ impl<'a, T> CanonicalizeIdentifiers<'a> for Box<[T; 2]>
         self[0].canonicalize_identifiers(functions, locals)?;
         self[1].canonicalize_identifiers(functions, locals)?;
         Ok(())
+    }
+}
+
+#[derive(Eq, PartialEq)]
+struct HashPointer<'a, T: 'a + ?Sized>(&'a T);
+
+impl<'a, T: 'a + ?Sized> hash::Hash for HashPointer<'a, T> {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        state.write_usize(self as *const _ as usize);
+    }
+}
+
+impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        match *self {
+            AstNode::Identifier(id) => state.write_usize(id.0.as_ptr() as usize),
+            AstNode::Expression(expr) => HashPointer(expr).hash(state),
+            AstNode::Statement(stmt) => HashPointer(stmt).hash(state),
+            AstNode::Function(func) => HashPointer(func).hash(state),
+            AstNode::Program(prgm) => HashPointer(prgm).hash(state),
+        }
     }
 }
 
