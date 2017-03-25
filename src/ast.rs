@@ -60,6 +60,46 @@ pub enum AstNode<'a, 'b>
     Program(&'b Program<'a>),
 }
 
+impl<'a, 'b> From<Identifier<'a>> for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn from(id: Identifier<'a>) -> AstNode<'a, 'b> {
+        AstNode::Identifier(id)
+    }
+}
+
+impl<'a, 'b> From<&'b Expression<'a>> for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn from(expr: &'b Expression<'a>) -> AstNode<'a, 'b> {
+        AstNode::Expression(expr)
+    }
+}
+
+impl<'a, 'b> From<&'b Statement<'a>> for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn from(stmt: &'b Statement<'a>) -> AstNode<'a, 'b> {
+        AstNode::Statement(stmt)
+    }
+}
+
+impl<'a, 'b> From<&'b Function<'a>> for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn from(func: &'b Function<'a>) -> AstNode<'a, 'b> {
+        AstNode::Function(func)
+    }
+}
+
+impl<'a, 'b> From<&'b Program<'a>> for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn from(prgm: &'b Program<'a>) -> AstNode<'a, 'b> {
+        AstNode::Program(prgm)
+    }
+}
+
 /// Walk the AST and ensure all identifiers are canonicalized.
 ///
 /// After canonicalizing identifiers, all equivalent identifiers have pointer
