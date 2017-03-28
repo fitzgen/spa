@@ -107,12 +107,12 @@ mod tests {
     fn function() {
         assert_eq!(parse_Function("foo(w, x) { var y, z; output 1; return 2; }"),
                    Ok(ast::Function {
-                       name: ast::Identifier("foo"),
-                       arguments: vec![ast::Identifier("w"), ast::Identifier("x")],
-                       variables: vec![ast::Identifier("y"), ast::Identifier("z")],
-                       body: vec![ast::Statement::Output(ast::Expression::Integer(1))],
-                       ret: ast::Expression::Integer(2),
-                   }));
+                          name: ast::Identifier("foo"),
+                          arguments: vec![ast::Identifier("w"), ast::Identifier("x")],
+                          variables: vec![ast::Identifier("y"), ast::Identifier("z")],
+                          body: vec![ast::Statement::Output(ast::Expression::Integer(1))],
+                          ret: ast::Expression::Integer(2),
+                      }));
     }
 
     #[test]
@@ -124,6 +124,7 @@ mod tests {
 foo(w, x) { var y, z; output 1; return 2; }
 bar(x) { var y; output 1; return x; }
 ")
-            .is_ok());
+                        .is_ok());
+        assert!(parse_Program("id(x) { return x; }").is_ok());
     }
 }

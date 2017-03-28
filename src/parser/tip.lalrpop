@@ -67,9 +67,14 @@ Comma<T>: Vec<T> = {
     }
 };
 
+Vars: Vec<ast::Identifier<'input>> = {
+    "var" <vars:Comma<Identifier>> ";" => vars,
+    () => vec![],
+};
+
 pub Function: ast::Function<'input> =
     <name:Identifier> "(" <args:Comma<Identifier>> ")" "{"
-        "var" <vars:Comma<Identifier>> ";"
+        <vars:Vars>
         <body:Statements>
         "return" <ret:Expression> ";"
     "}" => ast::Function {
