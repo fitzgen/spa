@@ -127,6 +127,267 @@ impl<'a, 'b> From<&'b Program<'a>> for AstNode<'a, 'b>
     }
 }
 
+/// Dump an AST to stdout. Has even more detailed diagnostics than exposed the
+/// `Debug` implementation.
+pub trait DumpAst {
+    /// Dump this AST to stdout.
+    fn dump_ast(&self, indent: usize);
+}
+
+fn print_indent(indent: usize) {
+    for _ in 0..indent {
+        print!("    ");
+    }
+}
+
+fn addr<'a, 'b, T>(t: T) -> *const ()
+    where 'a: 'b,
+          T: Into<AstNode<'a, 'b>>
+{
+    let t = t.into();
+    (&t).into()
+}
+
+impl<'a, 'b> DumpAst for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn dump_ast(&self, indent: usize) {
+        match *self {
+            AstNode::Identifier(i) => i.dump_ast(indent),
+            AstNode::Expression(e) => e.dump_ast(indent),
+            AstNode::Statement(s) => s.dump_ast(indent),
+            AstNode::Function(f) => f.dump_ast(indent),
+            AstNode::Program(p) => p.dump_ast(indent),
+        }
+    }
+}
+
+impl<'a> DumpAst for Identifier<'a> {
+    fn dump_ast(&self, indent: usize) {
+        print!("{:p} ", addr(*self));
+        print_indent(indent);
+        println!("{:?}", self);
+    }
+}
+
+impl<'a> DumpAst for Expression<'a> {
+    fn dump_ast(&self, indent: usize) {
+        print!("{:p} ", addr(self));
+        print_indent(indent);
+        print!("Expression::");
+
+        match *self {
+            Expression::Input => {
+                println!("Input");
+            }
+            Expression::Malloc => {
+                println!("Malloc");
+            }
+            Expression::Integer(x) => {
+                println!("Integer({})", x);
+            }
+            Expression::Null => {
+                println!("Null");
+            }
+            Expression::AddressOf(ident) => {
+                println!("AddressOf");
+                ident.dump_ast(indent + 1);
+            }
+            Expression::Identifier(ident) => {
+                println!("Identifier");
+                ident.dump_ast(indent + 1);
+            }
+            Expression::Negation(ref expr) => {
+                println!("Negation");
+                expr.dump_ast(indent + 1);
+            }
+            Expression::Deref(ref expr) => {
+                println!("Deref");
+                expr.dump_ast(indent + 1);
+            }
+            Expression::Subtraction(ref operands) => {
+                println!("Subtraction");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Multiplication(ref operands) => {
+                println!("Multiplication");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Division(ref operands) => {
+                println!("Division");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Equal(ref operands) => {
+                println!("Equal");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Greater(ref operands) => {
+                println!("Greater");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Addition(ref operands) => {
+                println!("Addition");
+                operands[0].dump_ast(indent + 1);
+                operands[1].dump_ast(indent + 1);
+            }
+            Expression::Call(ref ident, ref args) => {
+                println!("Call");
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("ident:");
+                ident.dump_ast(indent + 2);
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("args:");
+                for arg in args {
+                    arg.dump_ast(indent + 2);
+                }
+            }
+            Expression::IndirectCall(ref func, ref args) => {
+                println!("IndirectCall");
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("func:");
+                func.dump_ast(indent + 2);
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("args:");
+                for arg in args {
+                    arg.dump_ast(indent + 2);
+                }
+            }
+        }
+    }
+}
+
+impl<'a> DumpAst for Statement<'a> {
+    fn dump_ast(&self, indent: usize) {
+        print!("{:p} ", addr(self));
+        print_indent(indent);
+        print!("Statement::");
+
+        match *self {
+            Statement::Assignment(ref ident, ref expr) => {
+                println!("Assignment");
+                ident.dump_ast(indent + 1);
+                expr.dump_ast(indent + 1);
+            }
+            Statement::DerefAssignment(ref ident, ref expr) => {
+                println!("DerefAssignment");
+                ident.dump_ast(indent + 1);
+                expr.dump_ast(indent + 1);
+            }
+            Statement::Output(ref expr) => {
+                println!("Output");
+                expr.dump_ast(indent + 1);
+            }
+            Statement::If(ref condition, ref consequent, ref alternative) => {
+                println!("If");
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("Condition");
+                condition.dump_ast(indent + 2);
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("Consequent");
+                for s in consequent {
+                    s.dump_ast(indent + 2);
+                }
+
+                if let Some(ref alternative) = *alternative {
+                    print!("........... ");
+                    print_indent(indent + 1);
+                    println!("Alternative");
+                    for s in alternative {
+                        s.dump_ast(indent + 2);
+                    }
+                } else {
+                    print!("........... ");
+                    print_indent(indent + 1);
+                    println!("No alternative");
+                }
+            }
+            Statement::While(ref condition, ref statements) => {
+                println!("While");
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("Condition");
+                condition.dump_ast(indent + 2);
+
+                print!("........... ");
+                print_indent(indent + 1);
+                println!("Statements");
+                for s in statements {
+                    s.dump_ast(indent + 2);
+                }
+            }
+        }
+    }
+}
+
+impl<'a> DumpAst for Function<'a> {
+    fn dump_ast(&self, indent: usize) {
+        print!("{:p} ", addr(self));
+        print_indent(indent);
+        println!("Function");
+
+        print!("........... ");
+        print_indent(indent + 1);
+        println!("Name");
+        self.name.dump_ast(indent + 2);
+
+        print!("........... ");
+        print_indent(indent + 1);
+        println!("Arguments");
+        for a in &self.arguments {
+            a.dump_ast(indent + 2);
+        }
+
+        print!("........... ");
+        print_indent(indent + 1);
+        println!("Variables");
+        for v in &self.variables {
+            v.dump_ast(indent + 2);
+        }
+
+        print!("........... ");
+        print_indent(indent + 1);
+        println!("Body");
+        for b in &self.body {
+            b.dump_ast(indent + 2);
+        }
+
+        print!("........... ");
+        print_indent(indent + 1);
+        println!("Return");
+        self.ret.dump_ast(indent + 2);
+    }
+}
+
+impl<'a> DumpAst for Program<'a> {
+    fn dump_ast(&self, indent: usize) {
+        print!("{:p} ", addr(self));
+        print_indent(indent);
+        println!("Program");
+
+        for f in &self.functions {
+            f.dump_ast(indent + 1);
+        }
+    }
+}
+
 /// Walk the AST and ensure all identifiers are canonicalized.
 ///
 /// After canonicalizing identifiers, all equivalent identifiers have pointer
