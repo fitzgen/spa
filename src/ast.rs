@@ -60,6 +60,30 @@ pub enum AstNode<'a, 'b>
     Program(&'b Program<'a>),
 }
 
+impl<'a, 'b, 'c> From<&'c AstNode<'a, 'b>> for *const ()
+    where 'c: 'a,
+          'a: 'b
+{
+    fn from(node: &'c AstNode<'a, 'b>) -> *const () {
+        match *node {
+            AstNode::Identifier(id) => id.0.as_ptr() as *const _,
+            AstNode::Expression(expr) => expr as *const _ as *const _,
+            AstNode::Statement(stmt) => stmt as *const _ as *const _,
+            AstNode::Function(func) => func as *const _ as *const _,
+            AstNode::Program(prgm) => prgm as *const _ as *const _,
+        }
+    }
+}
+
+impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
+    where 'a: 'b
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        let addr: *const () = self.into();
+        addr.hash(state);
+    }
+}
+
 impl<'a, 'b> From<Identifier<'a>> for AstNode<'a, 'b>
     where 'a: 'b
 {
@@ -289,29 +313,6 @@ impl<'a, T> CanonicalizeIdentifiers<'a> for Box<[T; 2]>
         self[0].canonicalize_identifiers(functions, locals)?;
         self[1].canonicalize_identifiers(functions, locals)?;
         Ok(())
-    }
-}
-
-#[derive(Eq, PartialEq)]
-struct HashPointer<'a, T: 'a + ?Sized>(&'a T);
-
-impl<'a, T: 'a + ?Sized> hash::Hash for HashPointer<'a, T> {
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        state.write_usize(self as *const _ as usize);
-    }
-}
-
-impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
-    where 'a: 'b
-{
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        match *self {
-            AstNode::Identifier(id) => state.write_usize(id.0.as_ptr() as usize),
-            AstNode::Expression(expr) => HashPointer(expr).hash(state),
-            AstNode::Statement(stmt) => HashPointer(stmt).hash(state),
-            AstNode::Function(func) => HashPointer(func).hash(state),
-            AstNode::Program(prgm) => HashPointer(prgm).hash(state),
-        }
     }
 }
 
