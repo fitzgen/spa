@@ -96,7 +96,10 @@ impl<'a, 'b> From<&'b Expression<'a>> for AstNode<'a, 'b>
     where 'a: 'b
 {
     fn from(expr: &'b Expression<'a>) -> AstNode<'a, 'b> {
-        AstNode::Expression(expr)
+        match *expr {
+            Expression::Identifier(id) => id.into(),
+            ref otherwise => AstNode::Expression(otherwise),
+        }
     }
 }
 
