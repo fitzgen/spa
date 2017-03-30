@@ -6,6 +6,10 @@ use std::fmt;
 pub enum Error {
     /// Found a reference to an unknown identifier.
     ReferenceToUnknownIdentifier,
+    /// Found circular type constraints.
+    CircularTypeConstraints,
+    /// Found unsolvable type constraints, AKA a type error.
+    UnsolvableTypeConstraints,
 }
 
 impl fmt::Display for Error {
@@ -18,6 +22,8 @@ impl error::Error for Error {
     fn description(&self) -> &'static str {
         match *self {
             Error::ReferenceToUnknownIdentifier => "found a reference to an unknown identifier",
+            Error::CircularTypeConstraints => "found circular type constraints",
+            Error::UnsolvableTypeConstraints => "found unsolvable type constraints, AKA a type error",
         }
     }
 }
