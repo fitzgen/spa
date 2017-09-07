@@ -31,7 +31,11 @@ pub enum Statement<'a> {
     Assignment(Identifier<'a>, Expression<'a>),
     DerefAssignment(Identifier<'a>, Expression<'a>),
     Output(Expression<'a>),
-    If(Expression<'a>, Vec<Statement<'a>>, Option<Vec<Statement<'a>>>),
+    If(
+        Expression<'a>,
+        Vec<Statement<'a>>,
+        Option<Vec<Statement<'a>>>,
+    ),
     While(Expression<'a>, Vec<Statement<'a>>),
 }
 
@@ -51,7 +55,8 @@ pub struct Program<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     Identifier(Identifier<'a>),
     Expression(&'b Expression<'a>),
@@ -61,8 +66,9 @@ pub enum AstNode<'a, 'b>
 }
 
 impl<'a, 'b, 'c> From<&'c AstNode<'a, 'b>> for *const ()
-    where 'c: 'a,
-          'a: 'b
+where
+    'c: 'a,
+    'a: 'b,
 {
     fn from(node: &'c AstNode<'a, 'b>) -> *const () {
         match *node {
@@ -76,7 +82,8 @@ impl<'a, 'b, 'c> From<&'c AstNode<'a, 'b>> for *const ()
 }
 
 impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         let addr: *const () = self.into();
@@ -85,7 +92,8 @@ impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
 }
 
 impl<'a, 'b> From<Identifier<'a>> for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn from(id: Identifier<'a>) -> AstNode<'a, 'b> {
         AstNode::Identifier(id)
@@ -93,7 +101,8 @@ impl<'a, 'b> From<Identifier<'a>> for AstNode<'a, 'b>
 }
 
 impl<'a, 'b> From<&'b Expression<'a>> for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn from(expr: &'b Expression<'a>) -> AstNode<'a, 'b> {
         match *expr {
@@ -104,7 +113,8 @@ impl<'a, 'b> From<&'b Expression<'a>> for AstNode<'a, 'b>
 }
 
 impl<'a, 'b> From<&'b Statement<'a>> for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn from(stmt: &'b Statement<'a>) -> AstNode<'a, 'b> {
         AstNode::Statement(stmt)
@@ -112,7 +122,8 @@ impl<'a, 'b> From<&'b Statement<'a>> for AstNode<'a, 'b>
 }
 
 impl<'a, 'b> From<&'b Function<'a>> for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn from(func: &'b Function<'a>) -> AstNode<'a, 'b> {
         AstNode::Function(func)
@@ -120,7 +131,8 @@ impl<'a, 'b> From<&'b Function<'a>> for AstNode<'a, 'b>
 }
 
 impl<'a, 'b> From<&'b Program<'a>> for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn from(prgm: &'b Program<'a>) -> AstNode<'a, 'b> {
         AstNode::Program(prgm)
@@ -141,15 +153,17 @@ fn print_indent(indent: usize) {
 }
 
 fn addr<'a, 'b, T>(t: T) -> *const ()
-    where 'a: 'b,
-          T: Into<AstNode<'a, 'b>>
+where
+    'a: 'b,
+    T: Into<AstNode<'a, 'b>>,
 {
     let t = t.into();
     (&t).into()
 }
 
 impl<'a, 'b> DumpAst for AstNode<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn dump_ast(&self, indent: usize) {
         match *self {
@@ -395,21 +409,26 @@ impl<'a> DumpAst for Program<'a> {
 /// that functions and locals with the same name end up with different canonical
 /// pointers.
 pub trait CanonicalizeIdentifiers<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b;
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b;
 }
 
 impl<'a> CanonicalizeIdentifiers<'a> for Identifier<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
-        self.0 = locals.get(self.0)
+        self.0 = locals
+            .get(self.0)
             .or_else(|| functions.get(self.0))
             .ok_or(error::Error::ReferenceToUnknownIdentifier)?;
         Ok(())
@@ -417,25 +436,22 @@ impl<'a> CanonicalizeIdentifiers<'a> for Identifier<'a> {
 }
 
 impl<'a> CanonicalizeIdentifiers<'a> for Expression<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         match *self {
-            Expression::Input |
-            Expression::Malloc |
-            Expression::Integer(_) |
-            Expression::Null => {}
+            Expression::Input | Expression::Malloc | Expression::Integer(_) | Expression::Null => {}
 
-            Expression::AddressOf(ref mut ident) |
-            Expression::Identifier(ref mut ident) => {
+            Expression::AddressOf(ref mut ident) | Expression::Identifier(ref mut ident) => {
                 ident.canonicalize_identifiers(functions, locals)?;
             }
 
-            Expression::Negation(ref mut expr) |
-            Expression::Deref(ref mut expr) => {
+            Expression::Negation(ref mut expr) | Expression::Deref(ref mut expr) => {
                 expr.canonicalize_identifiers(functions, locals)?;
             }
 
@@ -464,17 +480,21 @@ impl<'a> CanonicalizeIdentifiers<'a> for Expression<'a> {
 }
 
 impl<'a> CanonicalizeIdentifiers<'a> for Statement<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         match *self {
             Statement::Assignment(ref mut ident, ref mut expr) |
             Statement::DerefAssignment(ref mut ident, ref mut expr) => {
                 // These can only be locals, not functions.
-                ident.0 = locals.get(ident.0).ok_or(error::Error::ReferenceToUnknownIdentifier)?;
+                ident.0 = locals
+                    .get(ident.0)
+                    .ok_or(error::Error::ReferenceToUnknownIdentifier)?;
                 expr.canonicalize_identifiers(functions, locals)?;
             }
             Statement::Output(ref mut expr) => {
@@ -496,11 +516,13 @@ impl<'a> CanonicalizeIdentifiers<'a> for Statement<'a> {
 }
 
 impl<'a> CanonicalizeIdentifiers<'a> for Function<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    _: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        _: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         let new_locals = self.arguments
             .iter()
@@ -516,11 +538,13 @@ impl<'a> CanonicalizeIdentifiers<'a> for Function<'a> {
 }
 
 impl<'a> CanonicalizeIdentifiers<'a> for Program<'a> {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    _: &'b HashMap<&'a str, &'a str>,
-                                    _: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        _: &'b HashMap<&'a str, &'a str>,
+        _: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         let mut functions = HashMap::with_capacity(self.functions.len());
         for f in &self.functions {
@@ -534,13 +558,16 @@ impl<'a> CanonicalizeIdentifiers<'a> for Program<'a> {
 }
 
 impl<'a, T> CanonicalizeIdentifiers<'a> for Vec<T>
-    where T: CanonicalizeIdentifiers<'a>
+where
+    T: CanonicalizeIdentifiers<'a>,
 {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         for x in self.iter_mut() {
             x.canonicalize_identifiers(functions, locals)?;
@@ -550,13 +577,16 @@ impl<'a, T> CanonicalizeIdentifiers<'a> for Vec<T>
 }
 
 impl<'a, T> CanonicalizeIdentifiers<'a> for Option<T>
-    where T: CanonicalizeIdentifiers<'a>
+where
+    T: CanonicalizeIdentifiers<'a>,
 {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         if let Some(ref mut x) = *self {
             x.canonicalize_identifiers(functions, locals)?;
@@ -566,13 +596,16 @@ impl<'a, T> CanonicalizeIdentifiers<'a> for Option<T>
 }
 
 impl<'a, T> CanonicalizeIdentifiers<'a> for Box<[T; 2]>
-    where T: CanonicalizeIdentifiers<'a>
+where
+    T: CanonicalizeIdentifiers<'a>,
 {
-    fn canonicalize_identifiers<'b>(&'b mut self,
-                                    functions: &'b HashMap<&'a str, &'a str>,
-                                    locals: &'b HashMap<&'a str, &'a str>)
-                                    -> error::Result<()>
-        where 'a: 'b
+    fn canonicalize_identifiers<'b>(
+        &'b mut self,
+        functions: &'b HashMap<&'a str, &'a str>,
+        locals: &'b HashMap<&'a str, &'a str>,
+    ) -> error::Result<()>
+    where
+        'a: 'b,
     {
         self[0].canonicalize_identifiers(functions, locals)?;
         self[1].canonicalize_identifiers(functions, locals)?;
@@ -600,25 +633,41 @@ mod tests {
 
         let foo_string = String::from(foo);
         let mut foo_ident = Identifier(&foo_string);
-        assert!(foo_ident.0.as_ptr() != foo.as_ptr(),
-                "different pointers before canonicalization");
+        assert!(
+            foo_ident.0.as_ptr() != foo.as_ptr(),
+            "different pointers before canonicalization"
+        );
 
-        assert!(foo_ident.canonicalize_identifiers(&functions, &locals).is_ok());
-        assert_eq!(foo_ident.0.as_ptr(),
-                   foo.as_ptr(),
-                   "same pointers after canonicalization");
+        assert!(
+            foo_ident
+                .canonicalize_identifiers(&functions, &locals)
+                .is_ok()
+        );
+        assert_eq!(
+            foo_ident.0.as_ptr(),
+            foo.as_ptr(),
+            "same pointers after canonicalization"
+        );
 
         // Canonicalize local strings.
 
         let bar_string = String::from(bar);
         let mut bar_ident = Identifier(&bar_string);
-        assert!(bar_ident.0.as_ptr() != bar.as_ptr(),
-                "different pointers before canonicalization");
+        assert!(
+            bar_ident.0.as_ptr() != bar.as_ptr(),
+            "different pointers before canonicalization"
+        );
 
-        assert!(bar_ident.canonicalize_identifiers(&functions, &locals).is_ok());
-        assert_eq!(bar_ident.0.as_ptr(),
-                   bar.as_ptr(),
-                   "same pointers after canonicalization");
+        assert!(
+            bar_ident
+                .canonicalize_identifiers(&functions, &locals)
+                .is_ok()
+        );
+        assert_eq!(
+            bar_ident.0.as_ptr(),
+            bar.as_ptr(),
+            "same pointers after canonicalization"
+        );
 
         // Locals have priority over functions.
 
@@ -631,21 +680,33 @@ mod tests {
 
         let yet_another_foo_string = String::from(foo);
         let mut yet_another_foo_ident = Identifier(&yet_another_foo_string);
-        assert!(yet_another_foo_ident.0.as_ptr() != foo.as_ptr(),
-                "different pointers before canonicalization");
-        assert!(yet_another_foo_ident.0.as_ptr() != foo_local_str.as_ptr(),
-                "different pointers before canonicalization");
+        assert!(
+            yet_another_foo_ident.0.as_ptr() != foo.as_ptr(),
+            "different pointers before canonicalization"
+        );
+        assert!(
+            yet_another_foo_ident.0.as_ptr() != foo_local_str.as_ptr(),
+            "different pointers before canonicalization"
+        );
 
-        assert!(yet_another_foo_ident.canonicalize_identifiers(&functions, &locals).is_ok());
+        assert!(
+            yet_another_foo_ident
+                .canonicalize_identifiers(&functions, &locals)
+                .is_ok()
+        );
         assert!(yet_another_foo_ident.0.as_ptr() != foo.as_ptr());
-        assert_eq!(yet_another_foo_ident.0.as_ptr(),
-                   foo_local_str.as_ptr(),
-                   "same pointers after canonicalization");
+        assert_eq!(
+            yet_another_foo_ident.0.as_ptr(),
+            foo_local_str.as_ptr(),
+            "same pointers after canonicalization"
+        );
 
         // Unknown identifiers are an error.
 
         let mut unknown_ident = Identifier("unknown");
-        assert_eq!(unknown_ident.canonicalize_identifiers(&functions, &locals),
-                   Err(error::Error::ReferenceToUnknownIdentifier));
+        assert_eq!(
+            unknown_ident.canonicalize_identifiers(&functions, &locals),
+            Err(error::Error::ReferenceToUnknownIdentifier)
+        );
     }
 }

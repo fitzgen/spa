@@ -50,7 +50,8 @@ impl From<FunctionId> for usize {
 /// Common context needed throughout type checking.
 #[derive(Debug)]
 pub struct Context<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     type_var_id_counter: usize,
     ast_types: HashMap<ast::AstNode<'a, 'b>, TypeVariableId>,
@@ -60,7 +61,8 @@ pub struct Context<'a, 'b>
 }
 
 impl<'a, 'b> Context<'a, 'b>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     /// Construct a new `Context`.
     pub fn new() -> Context<'a, 'b> {
@@ -84,7 +86,8 @@ impl<'a, 'b> Context<'a, 'b>
 
     /// Get or create the type variable for the given AST node.
     pub fn type_var_for_node<N>(&mut self, node: N) -> TypeVariableId
-        where N: Into<ast::AstNode<'a, 'b>>
+    where
+        N: Into<ast::AstNode<'a, 'b>>,
     {
         let node = node.into();
         match self.ast_types.entry(node) {
@@ -104,7 +107,9 @@ impl<'a, 'b> Context<'a, 'b>
     fn take_function(&mut self, id: FunctionId) -> Function {
         let idx: usize = id.into();
         assert!(idx < self.function_types.len());
-        self.function_types[idx].take().expect("function should not already be taken")
+        self.function_types[idx]
+            .take()
+            .expect("function should not already be taken")
     }
 
     fn replace_function(&mut self, id: FunctionId, func: Function) {
@@ -121,10 +126,10 @@ impl<'a, 'b> Context<'a, 'b>
     pub fn int_type(&self) -> TypeId {
         match self.types[0] {
             Type::Int => TypeId(0),
-            otherwise => {
-                panic!("TypeId(0) should always be the canonical Type::Int! Found {:?}",
-                       otherwise)
-            }
+            otherwise => panic!(
+                "TypeId(0) should always be the canonical Type::Int! Found {:?}",
+                otherwise
+            ),
         }
     }
 
@@ -133,8 +138,10 @@ impl<'a, 'b> Context<'a, 'b>
     pub fn insert_type(&mut self, ty: Type) -> TypeId {
         if let Some(func_id) = ty.function() {
             let idx: usize = func_id.into();
-            assert!(idx < self.function_types.len(),
-                    "Call insert_function instead of insert_type for function types");
+            assert!(
+                idx < self.function_types.len(),
+                "Call insert_function instead of insert_type for function types"
+            );
         }
 
         let id = TypeId(self.types.len());
@@ -162,16 +169,15 @@ impl<'a, 'b> Context<'a, 'b>
     /// Set the type with the given id.
     pub fn set_type(&mut self, id: TypeId, ty: Type) {
         let idx: usize = id.into();
-        let slot = self.types.get_mut(idx).expect("should have a type at TypeId's index");
+        let slot = self.types
+            .get_mut(idx)
+            .expect("should have a type at TypeId's index");
         *slot = ty;
     }
 
     /// Define a new substitution, replacing all occurrences of `var` with `ty`.
     pub fn extend_substitutions(&mut self, var: TypeVariable, ty: TypeId) {
-        let substitutions: Vec<_> = self.substitutions
-            .values()
-            .cloned()
-            .collect();
+        let substitutions: Vec<_> = self.substitutions.values().cloned().collect();
         for sub in substitutions {
             self.apply_one_substitution(sub, var, ty)
         }
@@ -207,12 +213,10 @@ impl<'a, 'b> Context<'a, 'b>
     pub fn apply_all_substitutions(&mut self, within: TypeId) {
         match self.get_type(within) {
             Type::Int => return,
-            Type::Variable(var) => {
-                if let Some(new_ty_id) = self.substitutions.get(&var).cloned() {
-                    let new_ty = self.get_type(new_ty_id);
-                    self.set_type(within, new_ty);
-                }
-            }
+            Type::Variable(var) => if let Some(new_ty_id) = self.substitutions.get(&var).cloned() {
+                let new_ty = self.get_type(new_ty_id);
+                self.set_type(within, new_ty);
+            },
             Type::Pointer(id) => {
                 self.apply_all_substitutions(id);
             }
@@ -229,7 +233,8 @@ impl<'a, 'b> Context<'a, 'b>
 
     /// Unify the given type constraints.
     pub fn unify<C>(&mut self, constraints: C) -> error::Result<()>
-        where C: IntoIterator<Item = TypeConstraint>
+    where
+        C: IntoIterator<Item = TypeConstraint>,
     {
         let mut new_constraints = vec![];
 
@@ -302,7 +307,7 @@ impl<'a, 'b> Context<'a, 'b>
                 let idx: usize = func_id.into();
                 let func = self.function_types[idx].as_ref().unwrap();
                 func.params().iter().any(|p| self.occurs(var, *p)) ||
-                self.occurs(var, func.return_type())
+                    self.occurs(var, func.return_type())
             }
         }
     }
@@ -311,11 +316,12 @@ impl<'a, 'b> Context<'a, 'b>
     /// edges through the types graph (for example, from a function through its
     /// return type).
     pub fn display_type<W: Write>(&self, w: &mut W, ty: TypeId) -> io::Result<()> {
-        fn display_type<W: Write>(me: &Context,
-                                  w: &mut W,
-                                  ty: TypeId,
-                                  seen: &mut HashSet<TypeId>)
-                                  -> io::Result<()> {
+        fn display_type<W: Write>(
+            me: &Context,
+            w: &mut W,
+            ty: TypeId,
+            seen: &mut HashSet<TypeId>,
+        ) -> io::Result<()> {
             if seen.contains(&ty) {
                 return write!(w, "{:?}", ty);
             }
@@ -390,12 +396,15 @@ mod tests {
     use typing::constraints::ConstrainTypes;
 
     fn type_check(source: &'static str) -> error::Result<()> {
-        let mut program =
-            Box::new(parser::parse_Program(source).expect("source parses as a program"));
+        let mut program = Box::new(
+            parser::parse_Program(source).expect("source parses as a program"),
+        );
 
         let functions = HashMap::new();
         let locals = HashMap::new();
-        program.canonicalize_identifiers(&functions, &locals).unwrap();
+        program
+            .canonicalize_identifiers(&functions, &locals)
+            .unwrap();
         program.dump_ast(0);
 
         let mut ctx = Context::new();
@@ -446,9 +455,9 @@ f() {
 }
 ";
         assert!(match type_check(source) {
-                    Err(error::Error::UnsolvableTypeConstraints) => true,
-                    _ => false,
-                });
+            Err(error::Error::UnsolvableTypeConstraints) => true,
+            _ => false,
+        });
     }
 
     #[test]
@@ -462,8 +471,8 @@ f() {
 }
 ";
         assert!(match type_check(source) {
-                    Err(error::Error::CircularTypeConstraints) => true,
-                    _ => false,
-                });
+            Err(error::Error::CircularTypeConstraints) => true,
+            _ => false,
+        });
     }
 }

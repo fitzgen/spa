@@ -23,7 +23,9 @@ impl error::Error for Error {
         match *self {
             Error::ReferenceToUnknownIdentifier => "found a reference to an unknown identifier",
             Error::CircularTypeConstraints => "found circular type constraints",
-            Error::UnsolvableTypeConstraints => "found unsolvable type constraints, AKA a type error",
+            Error::UnsolvableTypeConstraints => {
+                "found unsolvable type constraints, AKA a type error"
+            }
         }
     }
 }

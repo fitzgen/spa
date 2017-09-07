@@ -44,9 +44,10 @@ pub struct Function {
 impl Function {
     /// Construct a new `Function` type.
     pub fn new<I, J, T>(params: I, return_type: T) -> Function
-        where I: IntoIterator<Item = J>,
-              J: Into<TypeId>,
-              T: Into<TypeId>
+    where
+        I: IntoIterator<Item = J>,
+        J: Into<TypeId>,
+        T: Into<TypeId>,
     {
         Function {
             params: params.into_iter().map(|p| p.into()).collect(),
@@ -84,7 +85,8 @@ pub enum Type {
 impl Type {
     /// Construct a new pointer type.
     pub fn new_pointer<T>(id: T) -> Type
-        where T: Into<TypeId>
+    where
+        T: Into<TypeId>,
     {
         Type::Pointer(id.into())
     }
