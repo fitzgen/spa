@@ -162,7 +162,7 @@ impl<'a, 'b> Context<'a, 'b>
     /// Set the type with the given id.
     pub fn set_type(&mut self, id: TypeId, ty: Type) {
         let idx: usize = id.into();
-        let mut slot = self.types.get_mut(idx).expect("should have a type at TypeId's index");
+        let slot = self.types.get_mut(idx).expect("should have a type at TypeId's index");
         *slot = ty;
     }
 
