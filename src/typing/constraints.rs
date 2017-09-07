@@ -39,12 +39,13 @@ pub trait ConstrainTypes<'a> {
     /// Report each type constraint by invoking the `f` function.
     ///
     /// This callback interface allows us to avoid allocations compared to
-    /// returning a `Vec`. Compared to a `&mut Vec<TypeConstraint>` out
-    /// parameter, this allows easier testing, as well as filtering trivially
-    /// true constraints like `int == int` immediately, rather than before
-    /// inserting them into the constraint set (which can in turn potentially
-    /// save some storage resizing). In practice, `f` should always get inlined,
-    /// and we'll avoid function call overhead as well.
+    /// returning a `Vec`. Once `-> impl Trait` is usable on stable and with
+    /// traits' methods, we can use that. Compared to a `&mut
+    /// Vec<TypeConstraint>` out parameter, this allows easier testing, as well
+    /// as filtering trivially true constraints like `int == int` immediately,
+    /// rather than before inserting them into the constraint set (which can in
+    /// turn potentially save some storage resizing). In practice, `f` should
+    /// always get inlined, and we'll avoid function call overhead as well.
     fn constrain_types<'b, F>(&'b self, ctx: &mut Context<'a, 'b>, f: &mut F)
         where 'a: 'b,
               F: FnMut(TypeConstraint);
