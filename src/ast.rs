@@ -81,6 +81,13 @@ where
     }
 }
 
+impl<'a> hash::Hash for Identifier<'a> {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        let ptr = self.0.as_ptr() as *const ();
+        ptr.hash(state);
+    }
+}
+
 impl<'a, 'b> hash::Hash for AstNode<'a, 'b>
 where
     'a: 'b,
