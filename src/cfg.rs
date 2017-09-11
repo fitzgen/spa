@@ -12,6 +12,10 @@
 
 use ast;
 use std::collections::HashMap;
+use std::fmt;
+use std::fs;
+use std::io::{self, Write};
+use std::path;
 
 /// A register is either an identifier from the source, or a temporary
 /// intermediate result.
@@ -19,6 +23,15 @@ use std::collections::HashMap;
 pub enum Register<'a> {
     Identifier(ast::Identifier<'a>),
     Temp(usize),
+}
+
+impl<'a> fmt::Display for Register<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Register::Identifier(id) => write!(f, "{}", id.0),
+            Register::Temp(n) => write!(f, "_r{}", n),
+        }
+    }
 }
 
 impl<'a> From<ast::Identifier<'a>> for Register<'a> {
@@ -30,6 +43,12 @@ impl<'a> From<ast::Identifier<'a>> for Register<'a> {
 /// A label pointing to the start of a basic block.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Label(usize);
+
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "L{}", self.0)
+    }
+}
 
 /// A basic block.
 ///
@@ -196,6 +215,101 @@ impl<'a> Context<'a> {
         let r = Register::Temp(self.register_counter);
         self.register_counter += 1;
         r
+    }
+
+    /// Generate a GraphViz dot file to visually present the CFG IR.
+    pub fn dot<P: AsRef<path::Path>>(&self, path: P) -> io::Result<()> {
+        let mut file = fs::File::create(path)?;
+
+        writeln!(
+            &mut file,
+            "digraph {{ rankdir=LR; node [shape=record, fontname=\"courier\"];"
+        )?;
+
+        for (i, block) in self.blocks.iter().enumerate() {
+            if let Some(ref block) = *block {
+                self.dot_block(&mut file, block)?;
+            } else {
+                writeln!(&mut file, "L{};", i)?;
+            }
+        }
+
+        writeln!(&mut file, "}}")?;
+
+        Ok(())
+    }
+
+    fn dot_block<W: io::Write>(&self, to: &mut W, block: &BasicBlock<'a>) -> io::Result<()> {
+        writeln!(
+            to,
+            r#"{label} [label="<start> {label} | "#,
+            label = block.label()
+        )?;
+        for insn in &block.instructions()[0..block.instructions().len() - 1] {
+            self.dot_instruction(to, insn)?;
+        }
+        write!(to, " | <exit> ")?;
+        self.dot_instruction(to, block.instructions().last().unwrap())?;
+        writeln!(to, "\"];")?;
+
+        match *block.instructions().last().unwrap() {
+            Instruction::Return(..) => {}
+            Instruction::Branch(_, t, f) => {
+                writeln!(to, "{}:exit -> {}:start [label=true];", block.label(), t)?;
+                writeln!(to, "{}:exit -> {}:start [label=false];", block.label(), f)?;
+            }
+            Instruction::Jump(l) => {
+                writeln!(to, "{}:exit -> {}:start;", block.label(), l)?;
+            }
+            ref otherwise => panic!("block should not end with {:?}", otherwise),
+        }
+
+        Ok(())
+    }
+
+    fn dot_instruction<W: io::Write>(&self, to: &mut W, insn: &Instruction<'a>) -> io::Result<()> {
+        use self::Instruction::*;
+
+        match *insn {
+            Input(r) => write!(to, "{} = input;\\l", r),
+            Output(r) => write!(to, "output {};\\l", r),
+            Malloc(r) => write!(to, "{} = malloc;\\l", r),
+            Null(r) => write!(to, "{} = null;\\l", r),
+            Deref(r1, r2) => write!(to, "{} = *{};\\l", r1, r2),
+            Int(r, n) => write!(to, "{} = {};\\l", r, n),
+            Add(r1, r2, r3) => write!(to, "{} = {} + {};\\l", r1, r2, r3),
+            Sub(r1, r2, r3) => write!(to, "{} = {} - {};\\l", r1, r2, r3),
+            Mul(r1, r2, r3) => write!(to, "{} = {} * {};\\l", r1, r2, r3),
+            Div(r1, r2, r3) => write!(to, "{} = {} / {};\\l", r1, r2, r3),
+            Eq(r1, r2, r3) => write!(to, "{} = {} == {};\\l", r1, r2, r3),
+            Gt(r1, r2, r3) => write!(to, "{} = {} &gt; {};\\l", r1, r2, r3),
+            Not(r1, r2) => write!(to, "{} = !{};\\l", r1, r2),
+            Call(r, id, ref args) => {
+                write!(to, "{} = {}(", r, id.0)?;
+                for (i, a) in args.iter().enumerate() {
+                    if i != 0 {
+                        write!(to, ", ")?;
+                    }
+                    write!(to, "{}", a)?;
+                }
+                write!(to, ");\\l")
+            }
+            Indirect(r1, r2, ref args) => {
+                write!(to, "{} = (*{})(", r1, r2)?;
+                for (i, a) in args.iter().enumerate() {
+                    if i != 0 {
+                        write!(to, ", ")?;
+                    }
+                    write!(to, "{}", a)?;
+                }
+                write!(to, ");\\l")
+            }
+            Addr(r1, r2) => write!(to, "{} = &{};\\l", r1, r2),
+            Mov(r1, r2) => write!(to, "{} = {};\\l", r1, r2),
+            Return(r) => write!(to, "return {};\\l", r),
+            Branch(r, t, f) => write!(to, "branch {} {} {};\\l", r, t, f),
+            Jump(l) => write!(to, "goto {};\\l", l),
+        }
     }
 }
 
@@ -788,6 +902,8 @@ rec(n) {
 ",
         ).unwrap();
 
+        ctx.dot("recursive_factorial.dot").unwrap();
+
         assert_eq!(
             ctx.blocks,
             &[
@@ -865,6 +981,8 @@ ite(n) {
 }
 ",
         ).unwrap();
+
+        ctx.dot("iterative_factorial.dot").unwrap();
 
         assert_eq!(
             ctx.blocks,
